@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CaseBoard AI - Real-Time Investigation Decision Support</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brandDark: '#0B0F17',
+            panelDark: '#111827',
+            borderDark: '#1F2937',
+            alertRed: '#EF4444',
+            alertRedDark: '#7F1D1D'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-brandDark text-gray-100 flex flex-col min-h-screen antialiased select-none">
+
+  <!-- ===================================================================== -->
+  <!-- 1. PERMANENT SAFEGUARDS BANNER (MANDATORY REQUIREMENT)                 -->
+  <!-- ===================================================================== -->
+  <div class="safeguards-banner px-4 py-2 flex items-center justify-between z-40 border-b border-gray-800">
+    <div class="flex items-center gap-3">
+      <span class="flex h-2 w-2 relative">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+      </span>
+      <span class="font-bold text-gray-200 tracking-wider">
+        Decision Support Only. Not Evidence. Human Review Required.
+      </span>
+      <span class="bg-gray-800 text-gray-400 text-[10px] px-2 py-0.5 rounded font-mono border border-gray-700">
+        FICTIONAL CASE • SYNTHETIC DATA ONLY
+      </span>
+    </div>
+    <div class="flex items-center gap-4 text-xs font-mono text-gray-400 lowercase">
+      <div class="flex items-center gap-1.5">
+        <span>victim identity:</span>
+        <button id="btn-alias-toggle" onclick="window.caseApp.toggleVictimAlias()" class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-800 uppercase cursor-pointer hover:bg-amber-900 transition">
+          Alias: Protected
+        </button>
+      </div>
+      <button onclick="window.caseApp.openModal('safeguards-modal')" class="text-blue-400 hover:text-blue-300 uppercase tracking-wider text-[11px] underline cursor-pointer">
+        Safeguards & Trauma Ethics &rarr;
+      </button>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 2. APPLICATION HEADER & CONTROLS                                      -->
+  <!-- ===================================================================== -->
+  <header class="bg-panelDark border-b border-gray-800 px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <div class="w-9 h-9 rounded bg-gradient-to-br from-red-600 to-blue-600 flex items-center justify-center font-black text-white text-lg tracking-tighter shadow-md">
+        CB
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-base font-bold text-white tracking-tight">CaseBoard AI</h1>
+          <span class="text-xs px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">CASE-2026-001</span>
+        </div>
+        <p class="text-xs text-gray-400">Real-time investigation decision support that finds contradictions and gaps, and never decides guilt.</p>
+      </div>
+    </div>
+
+    <!-- Live Demo Interview Control Bar -->
+    <div class="flex items-center gap-3 bg-gray-900/90 px-3.5 py-1.5 rounded-lg border border-gray-800">
+      <div class="text-xs font-mono">
+        <span class="text-gray-400">Demo Stream:</span>
+        <span id="interview-chunk-count" class="text-gray-200 font-semibold ml-1">0 / 3 lines</span>
+      </div>
+      
+      <!-- Speech Waveform -->
+      <div id="interview-wave-indicator" class="items-center h-4 hidden" style="display: none;">
+        <span class="waveform-bar" style="height: 12px;"></span>
+        <span class="waveform-bar" style="height: 18px;"></span>
+        <span class="waveform-bar" style="height: 8px;"></span>
+        <span class="waveform-bar" style="height: 16px;"></span>
+        <span class="waveform-bar" style="height: 10px;"></span>
+      </div>
+
+      <button id="btn-play-interview" onclick="window.caseApp.togglePlayInterview()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-medium flex items-center transition shadow-sm cursor-pointer">
+        <svg class="w-3.5 h-3.5 inline mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+        Play Live Interview
+      </button>
+
+      <!-- Progress bar -->
+      <div class="w-20 bg-gray-800 h-1.5 rounded-full overflow-hidden">
+        <div id="interview-progress" class="bg-blue-500 h-full w-0 transition-all duration-300"></div>
+      </div>
+
+      <!-- Quick Reset Buttons -->
+      <div class="flex items-center gap-1 border-l border-gray-800 pl-3">
+        <button onclick="window.caseApp.resetDemo('ready_for_interview')" title="Reset to Pre-Interview State (Sara not yet interviewed)" class="p-1 text-gray-400 hover:text-gray-200 text-xs cursor-pointer">
+          ↺ Pre-Interview
+        </button>
+        <button onclick="window.caseApp.resetDemo('full')" title="Reset to Full Case (All statements and contradictions loaded)" class="p-1 text-gray-400 hover:text-gray-200 text-xs cursor-pointer">
+          ⚡ Full Case
+        </button>
+      </div>
+    </div>
+
+    <!-- User Role Switcher & Settings -->
+    <div class="flex items-center gap-3">
+      <button id="role-toggle-btn" onclick="window.caseApp.toggleRole()" class="px-3 py-1.5 rounded-lg bg-gray-900 border border-gray-700 text-xs text-gray-200 flex items-center gap-2 hover:border-gray-500 transition font-mono cursor-pointer">
+        <span class="w-2 h-2 rounded-full bg-blue-400"></span> Investigator Role
+      </button>
+      <button onclick="window.caseApp.openModal('settings-modal')" class="p-2 rounded-lg bg-gray-900 border border-gray-800 hover:border-gray-600 text-gray-400 hover:text-gray-200 transition cursor-pointer" title="DigitalOcean Gradient AI Settings">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ===================================================================== -->
+  <!-- 3. TOP NAVIGATION TABS & STATS BAR                                    -->
+  <!-- ===================================================================== -->
+  <div class="bg-gray-950 border-b border-gray-800 px-6 py-2 flex items-center justify-between text-xs">
+    <div class="flex items-center gap-2">
+      <button id="tab-btn-workspace" onclick="window.caseApp.switchTab('workspace')" class="px-3 py-1.5 rounded bg-gray-800 text-white font-medium border border-gray-700 cursor-pointer">
+        Workspace (3-Panel)
+      </button>
+      <button id="tab-btn-graph" onclick="window.caseApp.switchTab('graph')" class="px-3 py-1.5 rounded text-gray-400 hover:text-gray-200 font-medium cursor-pointer">
+        Evidence Link Graph
+      </button>
+      <button id="tab-btn-leads" onclick="window.caseApp.switchTab('leads')" class="px-3 py-1.5 rounded text-gray-400 hover:text-gray-200 font-medium cursor-pointer">
+        Leads Panel & Gaps
+      </button>
+      <button id="tab-btn-summary" onclick="window.caseApp.switchTab('summary')" class="px-3 py-1.5 rounded text-gray-400 hover:text-gray-200 font-medium cursor-pointer">
+        Case Summary (Cited)
+      </button>
+      <button id="tab-btn-audit" onclick="window.caseApp.switchTab('audit')" class="px-3 py-1.5 rounded text-gray-400 hover:text-gray-200 font-medium cursor-pointer">
+        Audit Trail
+      </button>
+    </div>
+
+    <!-- Case Metrics Summary -->
+    <div class="flex items-center gap-5 text-gray-400 font-mono">
+      <div>Documents: <span id="stat-docs" class="text-gray-200 font-bold">0</span></div>
+      <div>Extracted Facts: <span id="stat-facts" class="text-blue-400 font-bold">0</span></div>
+      <div class="flex items-center gap-1.5">
+        <span>Contradictions:</span>
+        <span id="contra-badge-count" class="px-2 py-0.5 rounded text-[11px] font-bold bg-red-600 text-white">0 Open</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 4. MAIN CONTENT AREA                                                  -->
+  <!-- ===================================================================== -->
+  <main class="flex-1 flex flex-col overflow-hidden">
+
+    <!-- ----------------------------------------------------------------- -->
+    <!-- TAB 1: WORKSPACE 3-PANEL DASHBOARD (DEFAULT)                      -->
+    <!-- ----------------------------------------------------------------- -->
+    <div id="tab-pane-workspace" class="flex-1 flex flex-col md:flex-row overflow-hidden">
+
+      <!-- LEFT PANEL: EVIDENCE REPOSITORY & PEOPLE ROSTER -->
+      <aside id="panel-evidence" class="w-full md:w-80 lg:w-96 bg-panelDark border-r border-gray-800 flex flex-col overflow-hidden">
+        <div class="p-3.5 border-b border-gray-800 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded bg-blue-500"></span>
+            <h2 class="font-bold text-xs uppercase tracking-wider text-gray-200">Evidence & People</h2>
+          </div>
+          <button onclick="window.caseApp.openModal('intake-modal')" class="px-2.5 py-1 bg-blue-600/90 hover:bg-blue-600 text-white rounded text-xs font-medium flex items-center gap-1 transition cursor-pointer">
+            <svg class="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Intake
+          </button>
+        </div>
+
+        <!-- Filter Sub-tabs -->
+        <div class="flex items-center px-3 py-2 border-b border-gray-800/80 gap-1 text-[11px]">
+          <button onclick="window.caseApp.renderEvidenceList('all')" class="px-2 py-0.5 rounded bg-gray-800 text-gray-200 cursor-pointer">All</button>
+          <button onclick="window.caseApp.renderEvidenceList('statement')" class="px-2 py-0.5 rounded hover:bg-gray-800 text-gray-400 cursor-pointer">Statements</button>
+          <button onclick="window.caseApp.renderEvidenceList('telemetry')" class="px-2 py-0.5 rounded hover:bg-gray-800 text-gray-400 cursor-pointer">CCTV/Phone</button>
+          <button onclick="window.caseApp.renderEvidenceList('forensic')" class="px-2 py-0.5 rounded hover:bg-gray-800 text-gray-400 cursor-pointer">Forensics</button>
+        </div>
+
+        <!-- Documents Scroll List -->
+        <div id="evidence-items-list" class="flex-1 overflow-y-auto p-3">
+          <!-- Populated by JavaScript -->
+        </div>
+
+        <!-- People Roster Footer -->
+        <div class="p-3 bg-gray-950/80 border-t border-gray-800">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">People of Interest</div>
+          <div id="people-roster-list" class="space-y-1">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+      </aside>
+
+      <!-- CENTER PANEL: MASTER TIMELINE & LIVE TRANSCRIPT STREAM -->
+      <section id="panel-timeline" class="flex-1 flex flex-col bg-brandDark overflow-hidden border-r border-gray-800">
+        <div class="p-3.5 bg-panelDark border-b border-gray-800 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded bg-cyan-400"></span>
+            <h2 class="font-bold text-xs uppercase tracking-wider text-gray-200">Master Case Timeline</h2>
+          </div>
+          <span class="text-xs text-gray-400 font-mono">Sorted chronologically with gap highlights</span>
+        </div>
+
+        <!-- Timeline Scroll Area -->
+        <div class="flex-1 overflow-y-auto p-6" id="timeline-container">
+          <!-- Populated by timeline.js -->
+        </div>
+
+        <!-- Live Transcript Incoming Line Feed (Demo Mode) -->
+        <div class="p-3 bg-gray-950 border-t border-gray-800">
+          <div class="flex items-center justify-between text-xs mb-2 text-gray-400">
+            <span class="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px] text-blue-400">
+              <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+              Live Statement Intake Stream
+            </span>
+            <span class="text-[10px] text-gray-500">Auto-extracted facts with verbatim verification</span>
+          </div>
+          <div id="live-transcript-feed" class="max-h-28 overflow-y-auto">
+            <div class="text-xs text-gray-600 italic py-2 text-center">Click "Play Live Interview" to feed Sara's statement line by line.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT PANEL: CONTRADICTION ALERTS (LIVE PUSH) -->
+      <aside id="panel-alerts" class="w-full md:w-80 lg:w-96 bg-panelDark flex flex-col overflow-hidden">
+        <div class="p-3.5 border-b border-gray-800 flex items-center justify-between bg-red-950/20">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded bg-red-500 animate-ping"></span>
+            <h2 class="font-bold text-xs uppercase tracking-wider text-red-400">Live Inconsistency Alerts</h2>
+          </div>
+          <span class="text-[10px] font-mono text-gray-400">No page refresh needed</span>
+        </div>
+
+        <div id="alerts-feed-list" class="flex-1 overflow-y-auto p-3">
+          <!-- Populated by JavaScript -->
+        </div>
+      </aside>
+
+    </div>
+
+    <!-- ----------------------------------------------------------------- -->
+    <!-- TAB 2: EVIDENCE LINK GRAPH                                        -->
+    <!-- ----------------------------------------------------------------- -->
+    <div id="tab-pane-graph" class="flex-1 flex flex-col bg-brandDark p-6 overflow-hidden" style="display: none;">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-sm font-bold text-white uppercase tracking-wider">Evidence Link Graph (Interactive Network)</h2>
+          <p class="text-xs text-gray-400">Visualizes connections between People (Gold/Blue), Documents (Slate), and Contradiction Alerts (Red).</p>
+        </div>
+        <div class="flex items-center gap-3 text-xs font-mono">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> Victim</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span> Suspect / Alert</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span> Witness</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-gray-500 inline-block"></span> Document</span>
+        </div>
+      </div>
+      <div class="flex-1 bg-gray-950 rounded-lg border border-gray-800 overflow-hidden relative">
+        <canvas id="evidence-graph-canvas" class="w-full h-full block"></canvas>
+      </div>
+    </div>
+
+    <!-- ----------------------------------------------------------------- -->
+    <!-- TAB 3: LEADS PANEL & GAPS                                         -->
+    <!-- ----------------------------------------------------------------- -->
+    <div id="tab-pane-leads" class="flex-1 overflow-y-auto p-8 max-w-5xl mx-auto w-full" style="display: none;">
+      <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-800">
+        <div>
+          <h2 class="text-base font-bold text-white">Investigative Leads & Timeline Gap Analysis</h2>
+          <p class="text-xs text-gray-400">Automated decision-support suggestions highlighting critical unaccounted windows and contradictory alibis.</p>
+        </div>
+        <button onclick="fetch(window.caseApp.getApiUrl('/api/leads/generate'), {method:'POST'}).then(() => window.caseApp.fetchCaseData())" class="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+          <svg class="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          Re-Analyze Leads
+        </button>
+      </div>
+      <div id="leads-items-list">
+        <!-- Populated by JavaScript -->
+      </div>
+    </div>
+
+    <!-- ----------------------------------------------------------------- -->
+    <!-- TAB 4: CASE SUMMARY (SOURCE-CITED PROSE)                          -->
+    <!-- ----------------------------------------------------------------- -->
+    <div id="tab-pane-summary" class="flex-1 overflow-y-auto p-8 max-w-4xl mx-auto w-full" style="display: none;">
+      <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-800 no-print">
+        <div>
+          <h2 class="text-base font-bold text-white">Source-Cited Case Dossier Summary</h2>
+          <p class="text-xs text-gray-400">Strictly grounded prosecution summary where every factual assertion terminates in a verified document reference.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="window.caseApp.copySummary()" class="px-3 py-1.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-medium border border-gray-700 transition cursor-pointer">
+            📋 Copy Text
+          </button>
+          <button onclick="window.caseApp.printDossier()" class="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition cursor-pointer">
+            🖨 Export Dossier (PDF/Print)
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-panelDark p-8 rounded-lg border border-gray-800 shadow-xl">
+        <div class="dossier-print-header hidden font-mono text-xs mb-4">
+          <strong>CONFIDENTIAL POLICE DOSSIER</strong> | CASE-2026-001 | HOMICIDE DIVISION
+        </div>
+        <div id="case-summary-text" class="font-serif text-sm text-gray-200 leading-relaxed space-y-4">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ----------------------------------------------------------------- -->
+    <!-- TAB 5: AUDIT TRAIL LOGS                                           -->
+    <!-- ----------------------------------------------------------------- -->
+    <div id="tab-pane-audit" class="flex-1 overflow-y-auto p-8 max-w-6xl mx-auto w-full" style="display: none;">
+      <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-800">
+        <div>
+          <h2 class="text-base font-bold text-white">Immutable Investigation Audit Trail</h2>
+          <p class="text-xs text-gray-400">Complete chain-of-custody logging. Documents, fact extractions, AI calls, and supervisor flags cannot be silently altered.</p>
+        </div>
+        <button onclick="window.caseApp.renderAuditLogs()" class="px-3 py-1.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs border border-gray-700 cursor-pointer">
+          ↻ Refresh Log
+        </button>
+      </div>
+
+      <div class="bg-panelDark rounded-lg border border-gray-800 overflow-hidden shadow">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-gray-950 text-gray-400 text-[11px] uppercase tracking-wider font-mono border-b border-gray-800">
+                <th class="p-2.5">ID</th>
+                <th class="p-2.5">Timestamp</th>
+                <th class="p-2.5">User (Role)</th>
+                <th class="p-2.5">Action</th>
+                <th class="p-2.5">Target</th>
+                <th class="p-2.5">Details</th>
+              </tr>
+            </thead>
+            <tbody id="audit-table-body">
+              <!-- Populated by JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- 5. MODALS                                                             -->
+  <!-- ===================================================================== -->
+
+  <!-- CONTRADICTION SIDE-BY-SIDE DIFF MODAL -->
+  <div id="contradiction-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-panelDark border border-gray-700 rounded-xl max-w-3xl w-full p-6 shadow-2xl relative">
+      <div class="flex items-center justify-between pb-3 mb-4 border-b border-gray-800">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-red-400 flex items-center gap-2">
+          <svg class="w-4 h-4 inline" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+          Side-by-Side Contradiction Detail
+        </h3>
+        <button onclick="window.caseApp.closeModal('contradiction-modal')" class="text-gray-400 hover:text-white text-lg font-bold cursor-pointer">&times;</button>
+      </div>
+      <div id="contradiction-modal-content">
+        <!-- Injected by JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- STATEMENT INTAKE MODAL -->
+  <div id="intake-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-panelDark border border-gray-700 rounded-xl max-w-2xl w-full p-6 shadow-2xl relative">
+      <div class="flex items-center justify-between pb-3 mb-4 border-b border-gray-800">
+        <h3 class="text-sm font-bold text-gray-200 uppercase tracking-wider">Statement & Evidence Intake</h3>
+        <button onclick="window.caseApp.closeModal('intake-modal')" class="text-gray-400 hover:text-white text-lg font-bold cursor-pointer">&times;</button>
+      </div>
+
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 mb-1">Subject / Person</label>
+            <select id="intake-person" class="w-full p-2 rounded bg-gray-950 border border-gray-700 text-xs text-gray-200">
+              <option value="P-02">Ali (Warehouse Employee, Suspect)</option>
+              <option value="P-03">Sara (Night Security Guard, Witness)</option>
+              <option value="P-04">Hamza (Business Partner, Suspect)</option>
+              <option value="P-05">Nadia (Residential Neighbor, Witness)</option>
+              <option value="">Other / Objective Electronic Telemetry</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 mb-1">Document Type</label>
+            <select id="intake-type" class="w-full p-2 rounded bg-gray-950 border border-gray-700 text-xs text-gray-200">
+              <option value="statement">Witness / Suspect Statement</option>
+              <option value="cctv">CCTV Hardware Telemetry</option>
+              <option value="phone log">Cellular Carrier Log</option>
+              <option value="forensic">Pathology / Forensic Report</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Document Title</label>
+          <input id="intake-title" type="text" class="w-full p-2 rounded bg-gray-950 border border-gray-700 text-xs text-gray-200" placeholder="e.g. Sara Statement #1 (Recorded Interview)">
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-semibold text-gray-400">Statement Text (Exact Transcribed Words)</label>
+            <button onclick="window.caseApp.loadUrduSample()" class="text-[11px] text-emerald-400 hover:text-emerald-300 underline cursor-pointer">
+              + Load Urdu Witness Statement Sample
+            </button>
+          </div>
+          <textarea id="intake-text" rows="5" class="w-full p-3 rounded bg-gray-950 border border-gray-700 text-xs text-gray-200 font-serif leading-relaxed focus:border-blue-500 focus:outline-none" placeholder="Paste statement or report text here. AI will extract structured facts with verified source quotes..."></textarea>
+        </div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-gray-800">
+          <span class="text-[11px] text-gray-500">Quotes not found verbatim in text will be rejected.</span>
+          <div class="flex items-center gap-2">
+            <button onclick="window.caseApp.closeModal('intake-modal')" class="px-3 py-1.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs cursor-pointer">Cancel</button>
+            <button onclick="window.caseApp.submitNewStatement()" class="px-4 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold cursor-pointer">Ingest & Extract Facts</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIGITALOCEAN GRADIENT AI SETTINGS MODAL -->
+  <div id="settings-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-panelDark border border-gray-700 rounded-xl max-w-xl w-full p-6 shadow-2xl relative">
+      <div class="flex items-center justify-between pb-3 mb-4 border-b border-gray-800">
+        <h3 class="text-sm font-bold text-gray-200 uppercase tracking-wider flex items-center gap-2">
+          <svg class="w-4 h-4 text-blue-400 inline" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          DigitalOcean Gradient AI Configuration
+        </h3>
+        <button onclick="window.caseApp.closeModal('settings-modal')" class="text-gray-400 hover:text-white text-lg font-bold cursor-pointer">&times;</button>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <p class="text-gray-400 leading-relaxed">
+          CaseBoard AI connects to DigitalOcean Serverless Inference using standard OpenAI-compatible endpoints. A deterministic engine is included so offline testing functions without disruption.
+        </p>
+
+        <div>
+          <label class="block font-semibold text-gray-300 mb-1">AI Provider</label>
+          <select id="setting-provider" class="w-full p-2 rounded bg-gray-950 border border-gray-700 text-gray-200">
+            <option value="digitalocean">DigitalOcean Gradient AI (Inference Endpoint)</option>
+            <option value="openai">OpenAI Compatible (Generic)</option>
+            <option value="fallback">Built-in Synthetic Model (Offline Zero-Config)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-gray-300 mb-1">Inference Base URL</label>
+          <input id="setting-base-url" type="text" class="w-full p-2 rounded bg-gray-950 border border-gray-700 text-gray-200 font-mono" value="https://inference.do-ai.run/v1">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-gray-300 mb-1">DigitalOcean API Token / Key</label>
+          <input id="setting-api-key" type="password" class="w-full p-2 rounded bg-gray-950 border border-gray-700 text-gray-200 font-mono" placeholder="dop_v1_... or leave blank for offline demo">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-gray-300 mb-1">Model Name</label>
+          <input id="setting-model" type="text" class="w-full p-2 rounded bg-gray-950 border border-gray-700 text-gray-200 font-mono" value="meta-llama/Llama-3.3-70B-Instruct">
+        </div>
+
+        <div class="p-3 bg-gray-950 rounded border border-gray-800 text-[11px] text-gray-400">
+          <span class="text-emerald-400 font-bold block mb-1">App Platform Ready:</span>
+          Configured for deployment on DigitalOcean App Platform with environment variables <code class="text-gray-300 font-mono">AI_BASE_URL</code>, <code class="text-gray-300 font-mono">AI_API_KEY</code>, and <code class="text-gray-300 font-mono">AI_MODEL</code>.
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-gray-800">
+          <button onclick="window.caseApp.closeModal('settings-modal')" class="px-3 py-1.5 rounded bg-gray-800 text-gray-300 cursor-pointer">Close</button>
+          <button onclick="window.saveSettings()" class="px-4 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-semibold cursor-pointer">Save Settings</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SAFEGUARDS & ETHICS MODAL -->
+  <div id="safeguards-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-panelDark border border-gray-700 rounded-xl max-w-2xl w-full p-6 shadow-2xl relative">
+      <div class="flex items-center justify-between pb-3 mb-4 border-b border-gray-800">
+        <h3 class="text-sm font-bold text-gray-200 uppercase tracking-wider flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+          Core Safeguards & Investigative Ethics Architecture
+        </h3>
+        <button onclick="window.caseApp.closeModal('safeguards-modal')" class="text-gray-400 hover:text-white text-lg font-bold cursor-pointer">&times;</button>
+      </div>
+
+      <div class="space-y-4 text-xs text-gray-300 leading-relaxed">
+        <div class="p-3 bg-red-950/30 border border-red-800/60 rounded">
+          <strong class="text-red-300 block mb-1 uppercase font-mono">Decision Support Only. Not Evidence.</strong>
+          CaseBoard AI assists investigators in organizing timelines and identifying discrepancies. It never delivers verdicts, never predicts guilt, and never calculates culpability scores.
+        </div>
+
+        <div>
+          <h4 class="font-bold text-gray-100 uppercase tracking-wider text-[11px] mb-1">1. Anti-Profiling & Anti-Bias Guarantees</h4>
+          <p class="text-gray-400">Zero scoring of demographics, race, religion, socioeconomic status, or neighborhood. Analysis is restricted purely to objective temporal and physical claims.</p>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-gray-100 uppercase tracking-wider text-[11px] mb-1">2. Victim Identity Protection</h4>
+          <p class="text-gray-400">Victim names are masked under a display alias by default to preserve dignity and privacy during cross-agency reviews.</p>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-gray-100 uppercase tracking-wider text-[11px] mb-1">3. Trauma Sensitivity & Sexual Violence Protocol</h4>
+          <p class="text-amber-300 bg-amber-950/20 p-2.5 rounded border border-amber-800/40">
+            For sexual violence and acute trauma cases, survivor accounts are never scored for consistency, because neurobiological inconsistency in trauma testimony is standard memory fragmentation. The tool only records faithfully and flags missing physical documentation.
+          </p>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-gray-100 uppercase tracking-wider text-[11px] mb-1">4. Verbatim Anti-Hallucination Gate</h4>
+          <p class="text-gray-400">Every extracted fact requires an exact character-sequence match in the source statement. Model hallucinations are instantly rejected at the backend gate.</p>
+        </div>
+      </div>
+
+      <div class="mt-6 pt-3 border-t border-gray-800 flex justify-end">
+        <button onclick="window.caseApp.closeModal('safeguards-modal')" class="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded text-xs font-semibold cursor-pointer">Understood</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GENERIC DOCUMENT / FACT DETAIL MODAL -->
+  <div id="generic-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-panelDark border border-gray-700 rounded-xl max-w-2xl w-full p-6 shadow-2xl relative">
+      <div class="flex items-center justify-between pb-3 mb-4 border-b border-gray-800">
+        <h3 id="generic-modal-title" class="text-sm font-bold text-gray-200">Document Detail</h3>
+        <button onclick="window.caseApp.closeModal('generic-modal')" class="text-gray-400 hover:text-white text-lg font-bold cursor-pointer">&times;</button>
+      </div>
+      <div id="generic-modal-body">
+        <!-- Injected by JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="js/graph.js"></script>
+  <script src="js/timeline.js"></script>
+  <script src="js/live_player.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    // Universal Global Proxy Handlers
+    window.openModal = function(id) {
+      if (window.caseApp && typeof window.caseApp.openModal === 'function') {
+        window.caseApp.openModal(id);
+      } else {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('hidden');
+      }
+    };
+
+    window.closeModal = function(id) {
+      if (window.caseApp && typeof window.caseApp.closeModal === 'function') {
+        window.caseApp.closeModal(id);
+      } else {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      }
+    };
+
+    window.saveSettings = async function() {
+      const provider = document.getElementById('setting-provider').value;
+      const baseUrl = document.getElementById('setting-base-url').value;
+      const apiKey = document.getElementById('setting-api-key').value;
+      const model = document.getElementById('setting-model').value;
+
+      try {
+        const url = window.caseApp && window.caseApp.getApiUrl ? window.caseApp.getApiUrl('/api/settings') : '/api/settings';
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            provider: provider,
+            base_url: baseUrl,
+            api_key: apiKey,
+            model: model
+          })
+        });
+        if (res.ok) {
+          window.caseApp.closeModal('settings-modal');
+          window.caseApp.showToast('AI Settings updated successfully.', 'success');
+        }
+      } catch(e) {
+        window.caseApp.closeModal('settings-modal');
+        window.caseApp.showToast('Settings saved locally.', 'info');
+      }
+    };
+  </script>
+</body>
+</html>

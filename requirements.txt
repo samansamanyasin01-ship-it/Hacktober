@@ -1,0 +1,5 @@
+# CaseBoard AI Dependencies
+# The core application runs cleanly using standard Python libraries (http.server, sqlite3, urllib).
+# The packages below are optional convenience libraries for production scaling.
+requests>=2.31.0
+python-dotenv>=1.0.0

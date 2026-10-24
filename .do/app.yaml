@@ -1,0 +1,24 @@
+name: caseboard-ai
+region: nyc
+services:
+  - name: caseboard-web
+    github:
+      branch: main
+      deploy_on_push: true
+    dockerfile_path: Dockerfile
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+      - key: AI_PROVIDER
+        value: digitalocean
+        scope: RUN_TIME
+      - key: AI_BASE_URL
+        value: https://inference.do-ai.run/v1
+        scope: RUN_TIME
+      - key: AI_MODEL
+        value: meta-llama/Llama-3.3-70B-Instruct
+        scope: RUN_TIME
+      - key: AI_API_KEY
+        type: SECRET
+        description: "DigitalOcean Serverless Inference API Token"

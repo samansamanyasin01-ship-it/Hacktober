@@ -1,0 +1,228 @@
+/* 
+  CaseBoard AI - Dark, Serious, Minimal Investigative Palette
+  Colors:
+  Background: #0B0F17 (Deep midnight navy)
+  Panels: #111827 (Dark slate)
+  Borders: #1F2937 & #374151 (Subtle cool gray)
+  Text: #F3F4F6 (Primary), #9CA3AF (Muted secondary)
+  Accent Red (Strictly for contradictions): #EF4444, #DC2626
+  Caution Amber (For timeline gaps): #F59E0B
+  Forensic Teal/Cyan: #06B6D4
+*/
+
+:root {
+  --bg-dark: #0B0F17;
+  --panel-bg: #111827;
+  --panel-lighter: #1A2234;
+  --border-color: #2D3748;
+  --border-focus: #4B5563;
+  --text-main: #F3F4F6;
+  --text-muted: #9CA3AF;
+  --text-dim: #6B7280;
+  --alert-red: #EF4444;
+  --alert-red-bg: rgba(239, 68, 68, 0.12);
+  --alert-red-border: rgba(239, 68, 68, 0.45);
+  --gap-amber: #F59E0B;
+  --gap-amber-bg: rgba(245, 158, 11, 0.12);
+  --forensic-cyan: #06B6D4;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  line-height: 1.5;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-dark);
+}
+::-webkit-scrollbar-thumb {
+  background: #2D3748;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4B5563;
+}
+
+/* Permanent Safeguards Banner */
+.safeguards-banner {
+  background: linear-gradient(90deg, #111827 0%, #1F2937 50%, #111827 100%);
+  border-bottom: 1px solid #374151;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Red Contradiction Card Pulse */
+@keyframes alertPulse {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+  70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.new-alert-pulse {
+  animation: alertPulse 2s infinite ease-out;
+}
+
+/* Side-by-Side Quote Comparison Diff */
+.diff-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .diff-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.diff-box {
+  background: #0D131F;
+  border: 1px solid #2D3748;
+  border-radius: 8px;
+  padding: 16px;
+  position: relative;
+}
+
+.diff-box.quote-a {
+  border-left: 4px solid #3B82F6;
+}
+
+.diff-box.quote-b {
+  border-left: 4px solid var(--alert-red);
+}
+
+.quote-highlight {
+  background: rgba(239, 68, 68, 0.2);
+  color: #FCA5A5;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+  border-bottom: 2px solid var(--alert-red);
+}
+
+/* Timeline Components */
+.timeline-track {
+  position: relative;
+}
+
+.timeline-track::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 28px;
+  width: 2px;
+  background: #2D3748;
+}
+
+.timeline-item {
+  position: relative;
+  padding-left: 60px;
+  margin-bottom: 24px;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: 21px;
+  top: 12px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #1F2937;
+  border: 3px solid #4B5563;
+  z-index: 2;
+}
+
+.timeline-item.forensic .timeline-dot {
+  border-color: var(--forensic-cyan);
+  background: #083344;
+}
+
+.timeline-item.has-conflict .timeline-dot {
+  border-color: var(--alert-red);
+  background: #7F1D1D;
+  animation: alertPulse 2.5s infinite;
+}
+
+/* Critical Timeline Gap Indicator */
+.timeline-gap-card {
+  margin-left: 60px;
+  margin-bottom: 24px;
+  background: var(--gap-amber-bg);
+  border: 1px dashed var(--gap-amber);
+  border-radius: 8px;
+  padding: 16px;
+  position: relative;
+}
+
+.timeline-gap-card::before {
+  content: "⚠ GAP";
+  position: absolute;
+  left: -48px;
+  top: 16px;
+  background: var(--gap-amber);
+  color: #000;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+/* Audio Simulation Waveform Animation */
+.waveform-bar {
+  display: inline-block;
+  width: 3px;
+  background-color: #3B82F6;
+  border-radius: 2px;
+  margin: 0 1px;
+  animation: soundBars 1s ease-in-out infinite alternate;
+}
+
+@keyframes soundBars {
+  0% { height: 4px; }
+  100% { height: 20px; }
+}
+
+.waveform-bar:nth-child(2) { animation-delay: 0.2s; }
+.waveform-bar:nth-child(3) { animation-delay: 0.4s; }
+.waveform-bar:nth-child(4) { animation-delay: 0.1s; }
+.waveform-bar:nth-child(5) { animation-delay: 0.5s; }
+
+/* Print Stylesheet for Dossier Export */
+@media print {
+  body {
+    background: #FFFFFF !important;
+    color: #111827 !important;
+  }
+  .no-print, header, .safeguards-banner, .demo-bar, #panel-alerts, #panel-evidence, button {
+    display: none !important;
+  }
+  #summary-content {
+    display: block !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+    line-height: 1.6 !important;
+  }
+  .dossier-print-header {
+    display: block !important;
+    border-bottom: 2px solid #000;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+  }
+}
